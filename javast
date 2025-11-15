@@ -1,0 +1,96 @@
+import React, { useState, useEffect } from 'react';
+import { Typography, Button, TextField, CircularProgress, ThemeProvider, createTheme } from '@mui/material';
+import { io } from 'socket.io-client';
+import './App.css';
+
+const socket = io('http://localhost:5000');
+
+const theme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#0d47a1',
+    },
+    secondary: {
+      main: '#1565c0',
+    },
+    background: {
+      default: '#121212',
+      paper: '#1e1e1e',
+    },
+    text: {
+      primary: '#ffffff',
+      secondary: '#90caf9',
+    },
+  },
+});
+
+function App() {
+  const [eyeStatus, setEyeStatus] = useState('Waiting...');
+  const [fps, setFps] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);  // Added error state
+
+  useEffect(() => {
+    // Socket.IO event listener for 'eye_status'
+    socket.on('eye_status', (data) => {
+      setEyeStatus(data.eye_tracking_status);
+      setFps(data.fps);
+      setLoading(false);
+    });
+
+    // Error handling for WebSocket connection
+    socket.on('connect_error', () => {
+      setError('Connection failed. Please ensure the backend is running.');
+    });
+
+    socket.emit('get_eye_status');
+    const interval = setInterval(() => {
+      socket.emit('get_eye_status');
+    }, 1000);
+
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, []);
+
+  return (
+    <ThemeProvider theme={theme}>
+      <div className="app-container" style={{ padding: '20px', textAlign: 'center', backgroundColor: theme.palette.background.default }}>
+        <Typography variant="h4" style={{ marginBottom: '20px', color: theme.palette.text.primary }}>
+          Eye Tracking & Voice Interaction
+        </Typography>
+
+        {error ? (
+          <Typography variant="h6" style={{ color: 'red' }}>
+            {error}
+          </Typography>
+        ) : (
+          <div className="status-container" style={{ margin: '20px 0', padding: '20px', backgroundColor: theme.palette.background.paper, borderRadius: '8px' }}>
+            <Typography variant="h6" style={{ marginBottom: '10px', color: theme.palette.text.secondary }}>
+              Eye Status: {loading ? <CircularProgress size={20} /> : eyeStatus}
+            </Typography>
+            <Typography variant="h6" style={{ color: theme.palette.text.secondary }}>
+              FPS: {fps}
+            </Typography>
+          </div>
+        )}
+
+        <TextField
+          label="Custom Input"
+          variant="outlined"
+          style={{ width: '100%', marginBottom: '20px', backgroundColor: theme.palette.background.paper }}
+          InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
+          InputProps={{ style: { color: theme.palette.text.primary } }}
+        />
+
+        <Button variant="contained" color="primary" style={{ marginRight: '10px' }}>
+          Start Listening
+        </Button>
+        <Button variant="contained" color="secondary">
+          Stop Listening
+        </Button>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+export default App;
