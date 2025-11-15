@@ -1,0 +1,58 @@
+import React, { useEffect } from 'react';
+
+const EyeTrackingCursor = () => {
+  useEffect(() => {
+    // Load the webgazer.js library
+    const script = document.createElement('script');
+    script.src = "https://webgazer.cs.brown.edu/webgazer.js";
+    script.async = true;
+    document.body.appendChild(script);
+
+    script.onload = () => {
+      window.webgazer.setRegression('ridge') // Choose your regression model
+        .setTracker('clmtrackr') // Choose your tracker
+        .begin(); // Start tracking
+
+      window.webgazer.showPredictionPoints(true); // Show gaze prediction points
+
+      const interval = setInterval(() => {
+        const gaze = window.webgazer.getCurrentPrediction();
+        if (gaze) {
+          const x = gaze.x;
+          const y = gaze.y;
+          if (x && y) {
+            // Move the cursor based on gaze data
+            document.querySelector('body').style.cursor = 'none'; // Hide default cursor
+            const cursor = document.getElementById('eye-cursor');
+            cursor.style.left = ${x}px;
+            cursor.style.top = ${y}px;
+          }
+        }
+      }, 100); // Check every 100ms
+
+      return () => {
+        clearInterval(interval); // Clean up on unmount
+      };
+    };
+
+    return () => {
+      script.remove(); // Remove the script when the component is unmounted
+    };
+  }, []);
+
+  return (
+    <div>
+      <div id="eye-cursor" style={{
+        position: 'absolute',
+        width: '20px',
+        height: '20px',
+        backgroundColor: 'red',
+        borderRadius: '50%',
+        pointerEvents: 'none', // Prevent interaction with the cursor
+        zIndex: '10000'
+      }} />
+    </div>
+  );
+};
+
+export default EyeTrackingCursor;
